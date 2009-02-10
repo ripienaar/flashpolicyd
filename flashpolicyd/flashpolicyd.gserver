@@ -1,0 +1,285 @@
+#!/usr/bin/ruby
+#
+# == Synopsis
+#
+# flashpolicyd: Serve Adobe Flash Policy XML files to clients
+#
+# == Description
+# Server to serve up flash policy xml files for flash clients since
+# player version 9,0,124,0. (Player 9 update 3)
+#
+# See http://www.adobe.com/devnet/flashplayer/articles/fplayer9_security_04.html
+# for more information, this needs to run as root since it should listen on 
+# port 843 which on a unix machine needs root to listen on that socket.
+#
+# On receiving a HUP signal a single line stat message will be printed, during
+# normal running this stat will be printed every 30 minutes
+#
+# == Usage
+# flashpolicyd [OPTIONS]
+#
+# --help, -h:
+#   Show Help
+#
+# --verbose
+#   Turns on verbose logging to syslog
+#
+# --xml
+#   XML File to Serve to clients, read at startup only
+# 
+# --timeout, -t
+#   If a request does not complete within this time, close the socket,
+#   default is 10 seconds
+#
+# --maxclients, -m
+#   The total maximum amount of clients that can connect at once, this include
+#   sockets in TIME_WAIT and other states.  Default is 100
+#
+# --logfreq, -l
+#   How often to log stats to syslog, default 1800 seconds
+#
+#
+# == Download and Further Information
+# Latest versions, installation documentation and other related info can be found
+# at http://www.devco.net/pubwiki/FlashPolicyd
+#
+# == Author
+# R.I.Pienaar <rip@devco.net>
+
+require 'gserver'
+require 'syslog'
+require 'getoptlong'
+require 'timeout'
+
+opts = GetoptLong.new(
+	[ '--xml', GetoptLong::REQUIRED_ARGUMENT],
+	[ '--verbose', '-v', GetoptLong::NO_ARGUMENT],
+	[ '--timeout', '-t', GetoptLong::OPTIONAL_ARGUMENT],
+	[ '--maxclients', '-m', GetoptLong::OPTIONAL_ARGUMENT],
+  	[ '--logfreq', '-l', GetoptLong::OPTIONAL_ARGUMENT],
+  	[ '--help', '-h', GetoptLong::NO_ARGUMENT]
+)
+
+
+class PolicyServer < GServer
+	def initialize(xmldata, verbose, timeout, *args)
+		# variables for verbose and what data to serve
+		@xmldata = xmldata
+		@verbose = verbose
+                @timeout = timeout
+
+		# variables to keep client counts and stats
+		@@totalclients = 0
+		@@bogusclients = 0
+		@@starttime = Time.new
+
+		# a mutex to protect our counters etc
+		@@policyMutex = Mutex.new
+
+		super(*args)
+	end
+
+	# only logs when in debug mode, generally the GServer code will just clal this in audit mode anyway
+	def log(msg)
+		Syslog.info(msg) if @verbose
+	end
+
+	def error(detail)
+		Syslog.crit(detail.backtrace.join("\n"))
+	end
+
+	# Logs stats about connections, bogus clients are ones who did not send
+	# a valid request within 10 seconds.
+   	def logstats
+		u = sec2dhms(Time.new - @@starttime)
+
+		Syslog.info("Had #{@@totalclients} clients of which #{@@bogusclients} were bogus. Uptime #{u[0]} days #{u[1]} hours #{u[2]} min. #{connections} connection(s) in use now.")
+	end
+
+	# Logs a message passed to it and increment the bogus client counter inside a mutex
+	def bogusclient(msg, client)
+    		addr = client.peeraddr
+		
+		Syslog.info("Client #{addr[2]} [#{addr[3]}] #{msg}")
+
+		@@policyMutex.synchronize {
+			@@bogusclients += 1
+		}
+	end
+
+	def threadstats 
+		Thread.list.each {|t|
+			Syslog.info("Thread: #{t.id} status #{t.status}")
+		}
+	end
+
+	# The server logic, waits for null terminated string that has 'policy-file-request' in it and send the XML.
+	#
+	# Stats will be gathered into two variables which will be used by the logstats method.  The stats are done
+	# in a mutex to protect from race conditions.
+	#
+	# If a client does not send expected data in --timeout seconds the socket will be closed. This guards against threads
+	# hanging around forever due to port scans and such
+	def serve(io)
+		# Flash clients send a null terminate request
+		$/ = "\000"
+
+		@@policyMutex.synchronize {
+			@@totalclients += 1
+		}
+
+		# run this in a timeout block, clients will have --timeout seconds to complete the transaction or go away
+		begin
+			timeout(@timeout.to_i) do
+				loop do
+					# check for up to 2 seconds if data is on the socket, fetch if they are
+					request = io.gets
+
+					if request =~ /policy-file-request/
+						io.puts(@xmldata)
+						
+						log("Sent xml data to client") # only when in debug mode
+
+						# sent the xml, close the connection
+						break
+					end
+				end
+			end
+		rescue Timeout::Error
+			bogusclient("connection timed out after #{@timeout} seconds", io)
+		rescue Exception => e
+			bogusclient("Unexpected exception: #{e}", io)
+		end
+	end
+end
+
+# Returns an array of days, hrs, mins and seconds given a second figure
+# The Ruby Way - Page 227
+def sec2dhms(secs)
+	time = secs.round
+	sec = time % 60
+	time /= 60
+	
+	mins = time % 60
+	time /= 60
+
+	hrs = time % 24
+	time /= 24
+
+	days = time
+	[days, hrs, mins, sec]
+end
+
+def shutdown(msg)
+	Syslog.info("Terminating: #{msg}")
+	Syslog.close
+
+	exit
+end
+
+# Goes into the background, chdir's to /tmp, and redirect all input/output to null
+# Beginning Ruby p. 489-490
+def daemonize
+	fork do
+		Process.setsid
+		exit if fork
+		Dir.chdir('/tmp')
+		STDIN.reopen('/dev/null')
+		STDOUT.reopen('/dev/null', 'a')
+		STDERR.reopen('/dev/null', 'a')
+
+		trap("TERM") { shutdown("Caught TERM signal") }
+		yield
+	end
+end
+
+# defaults
+@verbose = false
+@xmldata = ""
+@timeout = 10
+@maxclients = 100
+@logfreq = 1800
+xmlfile = ""
+
+opts.each { |opt, arg|
+	case opt
+		when '--help'
+			begin
+				require 'rdoc/ri/ri_paths'
+				require 'rdoc/usage'
+				RDoc::usage
+			rescue Exception => e
+				puts("Install RDoc::usage or view the comments in the top of the script to get detailed help")
+			end
+
+			exit
+		when '--xml'
+			xmlfile = arg
+		when '--verbose'
+			@verbose = true
+		when '--maxclients'
+			@maxclients = arg
+		when '--logfreq'
+			@logfreq = arg
+		when '--timeout'
+			@timeout = arg
+	end
+}
+
+# Read the xml data into a string
+if (xmlfile.length > 0 and File.exists?(xmlfile))
+	begin
+		@xmldata = IO.read(xmlfile)
+	rescue Exception => e
+		puts "Exception: #{e}"
+	end
+else
+	puts("Pass the path to the xml file to serve using --xml, see --help for detailed help")
+end
+
+Syslog.open("flashpolicyd")
+
+def mainloop
+	begin
+		server = PolicyServer.new(@xmldata, @verbose, @timeout, 843, '0.0.0.0', @maxclients.to_i)
+		server.audit = true if @verbose
+
+		begin
+			server.start
+		rescue Exception => e
+			Syslog.crit("Could not start server: #{e}")
+		   	Syslog.close
+			exit
+		end
+		
+		Syslog.info("Started flash policy server on port 843 with timeout of #{@timeout} seconds and max clients of #{@maxclients}")
+
+		# Send a HUP signal to log stats immediately
+		trap("HUP") { server.logstats }
+
+		# Send USR1 to dump a list of threads and their status
+		trap("USR1") { server.threadstats }
+
+		# Else log stats every --logfreq seconds only
+		loop do
+			sleep @logfreq.to_i
+			server.logstats()
+		end
+	rescue Exception => e
+		Syslog.crit("Server terminated unexpectadly in mainloop: #{e}")
+	   	Syslog.close
+		exit
+	end
+end
+
+# main loop that will run in the background
+
+if @verbose
+	puts("Starting mainloop in the foreground and setting Thread.abort_on_exception = true")
+	Thread.abort_on_exception = true
+	mainloop
+else
+	daemonize do
+		mainloop
+	end
+end
