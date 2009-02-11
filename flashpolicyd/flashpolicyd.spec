@@ -31,7 +31,7 @@ rm -rf %{buildroot}
 %{__install} -d -m0755  %{buildroot}/usr/sbin
 %{__install} -d -m 755  %{buildroot}%{_docdir}/%{name}-%{version}/rdoc
 %{__install} -m 755 flashpolicyd.init %{buildroot}/etc/init.d/flashpolicyd
-%{__install} -m 755 flashpolicyd %{buildroot}/usr/sbin/flashpolicyd
+%{__install} -m 755 flashpolicyd.rb %{buildroot}/usr/sbin/flashpolicyd
 %{__install} flashpolicy.xml %{buildroot}/etc/flashpolicy.xml
 %{__install} README %{buildroot}%{_docdir}/%{name}-%{version}/
 %{__install} check_flashpolicyd.rb %{buildroot}%{_docdir}/%{name}-%{version}/

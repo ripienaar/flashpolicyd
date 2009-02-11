@@ -4,7 +4,7 @@ require 'rake/rdoctask'
 require 'rake/clean'
 
 PROJ_NAME = "flashpolicyd"
-PROJ_FILES = ["build/doc", "flashpolicyd", "flashpolicyd.init", "flashpolicy.xml", "README", "check_flashpolicyd.rb", "#{PROJ_NAME}.spec"]
+PROJ_FILES = ["build/doc", "flashpolicyd.rb", "flashpolicyd.init", "flashpolicy.xml", "README", "check_flashpolicyd.rb", "#{PROJ_NAME}.spec"]
 PROJ_DOC_TITLE = "Flash Policy Daemon"
 PROJ_VERSION = "0.0"
 PROJ_RELEASE = "1"

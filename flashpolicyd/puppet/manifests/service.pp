@@ -10,7 +10,7 @@ class flashpolicyd::service {
 		owner	=> root,
 		group	=> root,
 		mode	=> 755,
-		source	=> "puppet://puppet/flashpolicyd/flashpolicyd",
+		source	=> "puppet://puppet/flashpolicyd/flashpolicyd.rb",
 	}
 
 	service{"flashpolicyd":
