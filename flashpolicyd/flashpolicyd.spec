@@ -6,8 +6,8 @@ Version: %{version}
 Release: %{release}
 Group: System Tools
 License: GPLv2
-URL: http://www.devco.net/pubwiki/FlashPolicyd
-Source0: http://www.devco.net/code/flashpolicyd-%{version}.tgz
+URL: http://code.google.com/p/flashpolicyd/
+Source0: http://flashpolicyd.googlecode.com/files/flashpolicyd-%{version}.tgz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Requires: ruby
 Requires(post): chkconfig
