@@ -1,5 +1,5 @@
 Puppet module to install flashpolicyd, file locations and init scripts are correct
-for Red Hat Enterprise.
+for Red Hat Enterprise.  If you use this module you don't need to use the RPM
 
 Copy the following files from the tarball to the module's file dir:
 
@@ -17,7 +17,7 @@ node "somenode.you.com" {
 To install the monitoring script on your nagios server do:
 
 node "nagios.you.com" {
-	include flashpolicyd::nagios
+	include flashpolicyd::monitor
 }
 
 And configure nagios to use the plugin in /usr/local/bin/check_flashpolicyd.rb.
