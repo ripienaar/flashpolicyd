@@ -1,4 +1,4 @@
-class flashpolicyd::nagios {
+class flashpolicyd::monitor {
 	file {"/usr/local/bin/check_flashpolicyd":
 		owner	=> root,
 		group	=> root,
