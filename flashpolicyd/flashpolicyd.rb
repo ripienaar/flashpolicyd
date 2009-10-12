@@ -43,7 +43,7 @@
 #
 # == Download and Further Information
 # Latest versions, installation documentation and other related info can be found
-# at http://www.devco.net/pubwiki/FlashPolicyd
+# at http://code.google.com/p/flashpolicyd
 #
 # == Author
 # R.I.Pienaar <rip@devco.net>
