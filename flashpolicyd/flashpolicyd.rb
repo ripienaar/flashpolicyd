@@ -45,6 +45,10 @@
 # Latest versions, installation documentation and other related info can be found
 # at http://code.google.com/p/flashpolicyd
 #
+# == License 
+# Released under the terms of the GPLv2, see the include COPYING file for full text of 
+# this license.
+#
 # == Author
 # R.I.Pienaar <rip@devco.net>
 
