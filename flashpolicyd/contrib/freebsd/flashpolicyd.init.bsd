@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+# FreeBSD init file for the flashpolicy server daemon
+#
+# Starts a server on port 843 to server flash policy requests
+#
+# Contributed to flashpolicyd by Denis Mikhinev
+
+# PROVIDE: flashpolicyd
+# REQUIRE: DAEMON
+# KEYWORD: shutdown
+
+#
+# Add the following lines to /etc/rc.conf to enable flashpolicyd:
+#
+# flashpolicyd_enable="YES"
+# 
+# flashpolicyd_timeout="10"
+# flashpolicyd_xml="/usr/local/etc/flashpolicyd/flashpolicy.xml"
+# flashpolicyd_logfreq="1800"
+# flashpolicyd_logfile="/var/log/flashpolicyd.log"
+
+. /etc/rc.subr
+
+name="flashpolicyd"
+rcvar=`set_rcvar`
+
+load_rc_config $name
+
+: ${flashpolicyd_enable:="NO"}
+: ${flashpolicyd_timeout:="10"}
+: ${flashpolicyd_xml:="/usr/local/etc/flashpolicyd/flashpolicy.xml"}
+: ${flashpolicyd_logfreq:="1800"}
+: ${flashpolicyd_logfile:="/var/log/flashpolicyd.log"}
+: ${flashpolicyd_pidfile:="/var/run/flashpolicyd.pid"}
+
+command="/usr/local/etc/flashpolicyd/flashpolicyd.rb"
+command_args="--timeout=${flashpolicyd_timeout} --xml=${flashpolicyd_xml} --logfreq=${flashpolicyd_logfreq} --logfile=${flashpolicyd_logfile}"
+command_interpreter="/usr/local/bin/ruby"
+
+run_rc_command "$1"
