@@ -41,6 +41,9 @@
 # --logfile
 #   Where to write log lines too
 #
+# --port
+#   What port to listen on 843 by default
+#
 # == Download and Further Information
 # Latest versions, installation documentation and other related info can be found
 # at http://code.google.com/p/flashpolicyd
@@ -65,6 +68,7 @@ opts = GetoptLong.new(
     [ '--timeout', '-t', GetoptLong::OPTIONAL_ARGUMENT],
     [ '--logfreq', '-l', GetoptLong::OPTIONAL_ARGUMENT],
     [ '--logfile', GetoptLong::REQUIRED_ARGUMENT],
+    [ '--port', GetoptLong::REQUIRED_ARGUMENT],
     [ '--help', '-h', GetoptLong::NO_ARGUMENT]
 )
 
@@ -73,6 +77,7 @@ opts = GetoptLong.new(
 @xmldata = ""
 @timeout = 10
 @logfreq = 1800
+@port = 843
 xmlfile = ""
 logfile = ""
 
@@ -98,6 +103,8 @@ opts.each { |opt, arg|
       @logfreq = arg
     when '--timeout'
       @timeout = arg
+    when '--port'
+      @port = arg.to_i
     when '--logfile'
       logfile = arg
   end
@@ -392,9 +399,9 @@ end
 # every @logfreq seconds, any exceptions gets logged and exits the server
 daemonize do
   begin
-    @logger.info("Starting server on port 843 in process #{$$}")
+    @logger.info("Starting server on port #{@port} in process #{$$}")
     
-    server = PolicyServer.new(843, "0.0.0.0", @xmldata, @logger, @timeout, @verbose)
+    server = PolicyServer.new(@port, "0.0.0.0", @xmldata, @logger, @timeout, @verbose)
     server.start
 
     # Send HUP to toggle debug mode or not for a running server
