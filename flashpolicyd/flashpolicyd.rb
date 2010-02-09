@@ -41,6 +41,9 @@
 # --logfile
 #   Where to write log lines too
 #
+# --user
+#   Drops privileges after binding to the socket to this user
+#
 # --port
 #   What port to listen on 843 by default
 #
@@ -67,6 +70,7 @@ opts = GetoptLong.new(
     [ '--verbose', '-v', GetoptLong::NO_ARGUMENT],
     [ '--timeout', '-t', GetoptLong::OPTIONAL_ARGUMENT],
     [ '--logfreq', '-l', GetoptLong::OPTIONAL_ARGUMENT],
+    [ '--user', '-u', GetoptLong::OPTIONAL_ARGUMENT],
     [ '--logfile', GetoptLong::REQUIRED_ARGUMENT],
     [ '--port', GetoptLong::REQUIRED_ARGUMENT],
     [ '--help', '-h', GetoptLong::NO_ARGUMENT]
@@ -80,6 +84,7 @@ opts = GetoptLong.new(
 @port = 843
 xmlfile = ""
 logfile = ""
+user = ""
 
 opts.each { |opt, arg|
   case opt
@@ -95,6 +100,8 @@ opts.each { |opt, arg|
       exit
     when '--xml'
       xmlfile = arg
+    when '--user'
+      user = arg
     when '--verbose'
       @verbose = true
     when '--maxclients'
@@ -403,6 +410,17 @@ daemonize do
     
     server = PolicyServer.new(@port, "0.0.0.0", @xmldata, @logger, @timeout, @verbose)
     server.start
+
+   # change user after binding to port
+   if user.length > 0
+        require 'etc'
+        uid = Etc.getpwnam(user).uid
+        gid = Etc.getpwnam(user).gid
+        # Change process ownership
+        Process.initgroups(user, gid)
+        Process::GID.change_privilege(gid)
+        Process::UID.change_privilege(uid)
+    end
 
     # Send HUP to toggle debug mode or not for a running server
     trap("HUP") {
