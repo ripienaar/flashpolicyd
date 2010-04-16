@@ -20,6 +20,8 @@ XML=/etc/flashpolicy.xml
 LOGFREQ=1800
 LOGFILE=/var/log/flashpolicyd.log
 USER=root
+BINDIR=/usr/sbin
+PORT=843
 
 if [ -r /etc/sysconfig/$prog ]; then
 	source /etc/sysconfig/$prog
@@ -27,7 +29,7 @@ fi
 
 start() {
 	echo -n $"Starting $desc ($prog): "
-	daemon --check=$prog /usr/sbin/${prog} --timeout=${TIMEOUT} --xml=${XML} --logfreq=${LOGFREQ} --logfile=${LOGFILE} --user=${USER}
+	daemon --check=$prog ${BINDIR}/${prog} --timeout=${TIMEOUT} --xml=${XML} --logfreq=${LOGFREQ} --logfile=${LOGFILE} --user=${USER} --port=${PORT}
 	RETVAL=$?
 	echo 
 	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/$prog
