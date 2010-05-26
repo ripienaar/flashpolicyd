@@ -8,7 +8,7 @@
 # processname: flashpolicyd.rb
 
 # Source function library.
-. /etc/rc.d/init.d/functions
+. /etc/init.d/functions
 
 desc="Flash policy server"
 prog="flashpolicyd"
@@ -16,7 +16,7 @@ prog="flashpolicyd"
 # these can be overrode in /etc/sysconfig/flashpolicyd
 RETVAL=0
 TIMEOUT=10
-XML=/etc/flashpolicy.xml
+XML=/usr/local/etc/flashpolicy.xml
 LOGFREQ=1800
 LOGFILE=/var/log/flashpolicyd.log
 USER=root
@@ -29,10 +29,10 @@ fi
 
 start() {
 	echo -n $"Starting $desc ($prog): "
-	daemon --check=$prog ${BINDIR}/${prog} --timeout=${TIMEOUT} --xml=${XML} --logfreq=${LOGFREQ} --logfile=${LOGFILE} --user=${USER} --port=${PORT}
+	start-stop-daemon -S --name $prog --exec ${BINDIR}/${prog} -- --timeout=${TIMEOUT} --xml=${XML} --logfreq=${LOGFREQ} --logfile=${LOGFILE} --user=${USER} --port=${PORT}
 	RETVAL=$?
 	echo 
-	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/$prog
+	[ $RETVAL -eq 0 ] && touch /var/lock/$prog
 	return $RETVAL
 }
 
@@ -41,7 +41,7 @@ stop() {
 	killproc $prog
 	RETVAL=$?
 	echo
-	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$prog
+	[ $RETVAL -eq 0 ] && rm -f /var/lock/$prog
 	return $RETVAL
 }
 
@@ -61,7 +61,7 @@ case "$1" in
   	restart
 	;;
   condrestart)
-	[ -e /var/lock/subsys/$prog ] && restart
+	[ -e /var/lock/$prog ] && restart
 	RETVAL=$?
 	;;
   status)
