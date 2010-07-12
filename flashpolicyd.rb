@@ -8,14 +8,14 @@
 # player version 9,0,124,0. (Player 9 update 3)
 #
 # See http://www.adobe.com/devnet/flashplayer/articles/fplayer9_security_04.html
-# for more information, this needs to run as root since it should listen on 
+# for more information, this needs to run as root since it should listen on
 # port 843 which on a unix machine needs root to listen on that socket.
 #
 # == Signals
 # * USR1 signal prints a single line stat message, during
 #   normal running this stat will be printed every 30 minutes by default, settable
 #   using --logfreq
-# * USR2 signal dumps the current threads and their statusses 
+# * USR2 signal dumps the current threads and their statusses
 # * HUP signal will toggle debug mode which will print more lines in the log file
 # * TERM signal will exit the process closing all the sockets
 #
@@ -30,7 +30,7 @@
 #
 # --xml
 #   XML File to Serve to clients, read at startup only
-# 
+#
 # --timeout, -t
 #   If a request does not complete within this time, close the socket,
 #   default is 10 seconds
@@ -47,12 +47,15 @@
 # --port
 #   What port to listen on 843 by default
 #
+# --no-daemonize
+#   Avoid daemonizing and run in the foreground
+#
 # == Download and Further Information
 # Latest versions, installation documentation and other related info can be found
 # at http://code.google.com/p/flashpolicyd
 #
-# == License 
-# Released under the terms of the GPLv2, see the include COPYING file for full text of 
+# == License
+# Released under the terms of the GPLv2, see the include COPYING file for full text of
 # this license.
 #
 # == Author
@@ -148,32 +151,32 @@ class PolicyServer
   def log(severity, msg)
     @logger.add(severity) { "#{Thread.current.object_id}: #{msg}" }
   end
-  
+
   # Log a msg at level INFO
   def info(msg)
     log(Logger::INFO, msg)
   end
-  
+
   # Log a msg at level WARN
   def warn(msg)
     log(Logger::WARN, msg)
   end
-  
+
   # Log a msg at level DEBUG
   def debug(msg)
     log(Logger::DEBUG, msg)
   end
-  
+
   # Log a msg at level FATAL
   def fatal(msg)
     log(Logger::FATAL, msg)
   end
-  
+
   # Log a msg at level ERROR
   def error(msg)
     log(Logger::ERROR, msg)
   end
-  
+
   # === Synopsis
   # Initializes the server
   #
@@ -211,7 +214,7 @@ class PolicyServer
       @logger.level = Logger::INFO
     end
   end
-  
+
   # If the logger instanse is in DEBUG mode, put it into INFO and vica versa
   def toggledebug
     if (@logger.debug?)
@@ -222,16 +225,16 @@ class PolicyServer
       info("Set logging level to DEBUG")
     end
   end
-  
+
   # Walks the list of active connections and dump them to the logger at INFO level
   def dumpconnections
     if (@connections.size == 0)
       info("No active connections to dump")
-    else 
+    else
       connections = @connections
-      
+
       info("Dumping current #{connections.size} connections:")
-    
+
       connections.each{ |c|
         addr = c.addr
         info("#{c.thread.object_id} started at #{c.timecreated} currently in #{c.thread.status} status serving #{addr[2]} [#{addr[3]}]")
@@ -240,7 +243,7 @@ class PolicyServer
   end
 
   # Dump the current thread list
-  def dumpthreads 
+  def dumpthreads
     Thread.list.each {|t|
       info("Thread: #{t.id} status #{t.status}")
     }
@@ -249,21 +252,21 @@ class PolicyServer
   # Prints some basic stats about the server so far, bogus client are ones that timeout or otherwise cause problems
   def printstats
     u = sec2dhms(Time.new - @@starttime)
-    
+
     info("Had #{@@totalclients} clients and #{@@bogusclients} bogus clients. Uptime #{u[0]} days #{u[1]} hours #{u[2]} min. #{@connections.size} connection(s) in use now.")
   end
-  
+
   # Logs a message passed to it and increment the bogus client counter inside a mutex
   def bogusclient(msg, client)
     addr = client.addr
-    
+
     warn("Client #{addr[2]} #{msg}")
 
     @@clientsMutex.synchronize {
       @@bogusclients += 1
     }
   end
-  
+
   # The main logic of client handling, waits for @timeout seconds to receive a null terminated
   # request containing "policy-file-request" and sends back the data, else marks the client as
   # bogus and close the connection.
@@ -271,7 +274,7 @@ class PolicyServer
   # Any exception caught during this should mark a client as bogus
   def serve(connection)
     client = connection.client
-        
+
     # Flash clients send a null terminate request
     $/ = "\000"
 
@@ -283,7 +286,7 @@ class PolicyServer
 
           if request =~ /policy-file-request/
             client.puts(@xml)
-            
+
             debug("Sent xml data to client")
             break
           end
@@ -299,16 +302,16 @@ class PolicyServer
       bogusclient("Unexpected #{e.class} exception: #{e}", connection)
     end
   end
-  
+
   # === Synopsis
   # Starts the main loop of the server and handles connections, logic is more or less:
-  # 
+  #
   # 1. Opens the port for listening
   # 1. Create a new thread so the connection handling happens seperate from the main loop
   # 1. Create a loop to accept new sessions from the socket, each new sesison gets a new thread
   # 1. Increment the totalclient variable for stats handling
   # 1. Create a OpenStruct structure with detail about the current connection and put it in the @connections array
-  # 1. Pass the connection to the serve method for handling 
+  # 1. Pass the connection to the serve method for handling
   # 1. Once handling completes, remove the connection from the active list and close the socket
   def start
     begin
@@ -319,12 +322,12 @@ class PolicyServer
       fatal("Can't open server: #{e.class} #{e}")
       exit
     end
-    
+
     begin
       @serverThread = Thread.new {
         while (session = server.accept)
-          Thread.new(session) do |client| 
-            begin 
+          Thread.new(session) do |client|
+            begin
               debug("Handling new connection from #{client.peeraddr[2]}, #{Thread.list.size} total threads ")
 
               @@clientsMutex.synchronize {
@@ -336,22 +339,22 @@ class PolicyServer
               connection.timecreated = Time.new
               connection.thread = Thread.current
               connection.addr = client.peeraddr
-          
+
               @@connMutex.synchronize {
                 @connections << connection
                 debug("Pushed connection thread to @connections, now #{@connections.size} connections")
               }
-              
+
               debug("Calling serve on connection")
               serve(connection)
-          
+
               client.close
-          
+
               @@connMutex.synchronize {
                 @connections.delete(connection)
                 debug("Removed connection from @connections, now #{@connections.size} connections")
               }
-          
+
             rescue Errno::ENOTCONN => e
               warn("Unexpected disconnection while handling request")
             rescue Errno::ECONNRESET => e
@@ -360,14 +363,14 @@ class PolicyServer
               error("Unexpected #{e.class} exception while handling client connection: #{e}")
               error("Unexpected #{e.class} exception while handling client connection: #{e.backtrace.join("\n")}")
               client.close
-            end # block around main logic 
+            end # block around main logic
           end # while
         end # around Thread.new for client connections
       } # @serverThread
     rescue Exception => e
       fatal("Got #{e.class} exception in main listening thread: #{e}")
     end
-  end    
+  end
 end
 
 # Goes into the background, chdir's to /tmp, and redirect all input/output to null
@@ -382,8 +385,8 @@ def run_server
       STDOUT.reopen('/dev/null', 'a')
       STDERR.reopen('/dev/null', 'a')
 
-      trap("TERM") { 
-        @logger.debug("Caught TERM signal") 
+      trap("TERM") {
+        @logger.debug("Caught TERM signal")
         exit
       }
       yield
@@ -399,7 +402,7 @@ def sec2dhms(secs)
   time = secs.round
   sec = time % 60
   time /= 60
-  
+
   mins = time % 60
   time /= 60
 
@@ -415,7 +418,7 @@ end
 run_server do
   begin
     @logger.info("Starting server on port #{@port} in process #{$$}")
-    
+
     server = PolicyServer.new(@port, "0.0.0.0", @xmldata, @logger, @timeout, @verbose)
     server.start
 
@@ -433,19 +436,19 @@ run_server do
     # Send HUP to toggle debug mode or not for a running server
     trap("HUP") {
       server.toggledebug
-    }    
+    }
 
     # send a USR1 signal for a full connection list dump
-    trap("USR1") { 
-      server.dumpconnections 
+    trap("USR1") {
+      server.dumpconnections
       server.printstats
     }
-    
+
     # Send USR2 to dump all threads
     trap("USR2") {
       server.dumpthreads
     }
-    
+
     # Cycle and print stats every now and then
     loop do
       sleep @logfreq.to_i
@@ -457,6 +460,6 @@ run_server do
     @logger.fatal("Unexpected exception #{e.class} from main loop: #{e}")
     @logger.fatal("Unexpected exception #{e.class} from main loop: #{e.backtrace.join("\n")}")
   end
-  
+
   @logger.info("Server process #{$$} shutting down")
 end
