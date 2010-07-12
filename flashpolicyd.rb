@@ -73,7 +73,8 @@ opts = GetoptLong.new(
     [ '--user', '-u', GetoptLong::OPTIONAL_ARGUMENT],
     [ '--logfile', GetoptLong::REQUIRED_ARGUMENT],
     [ '--port', GetoptLong::REQUIRED_ARGUMENT],
-    [ '--help', '-h', GetoptLong::NO_ARGUMENT]
+    [ '--help', '-h', GetoptLong::NO_ARGUMENT],
+    [ '--no-daemonize', GetoptLong::NO_ARGUMENT]
 )
 
 # defaults before parsing command line
@@ -82,6 +83,7 @@ opts = GetoptLong.new(
 @timeout = 10
 @logfreq = 1800
 @port = 843
+@daemonize = true
 xmlfile = ""
 logfile = ""
 user = ""
@@ -114,6 +116,8 @@ opts.each { |opt, arg|
       @port = arg.to_i
     when '--logfile'
       logfile = arg
+    when '--no-daemonize'
+      @daemonize = false
   end
 }
 
@@ -368,19 +372,23 @@ end
 
 # Goes into the background, chdir's to /tmp, and redirect all input/output to null
 # Beginning Ruby p. 489-490
-def daemonize
-  fork do
-    Process.setsid
-    exit if fork
-    Dir.chdir('/tmp')
-    STDIN.reopen('/dev/null')
-    STDOUT.reopen('/dev/null', 'a')
-    STDERR.reopen('/dev/null', 'a')
+def run_server
+  if @daemonize
+    fork do
+      Process.setsid
+      exit if fork
+      Dir.chdir('/tmp')
+      STDIN.reopen('/dev/null')
+      STDOUT.reopen('/dev/null', 'a')
+      STDERR.reopen('/dev/null', 'a')
 
-    trap("TERM") { 
-      @logger.debug("Caught TERM signal") 
-      exit
-    }
+      trap("TERM") { 
+        @logger.debug("Caught TERM signal") 
+        exit
+      }
+      yield
+    end
+  else
     yield
   end
 end
@@ -404,7 +412,7 @@ end
 
 # Go into the background and initalizes the server, sets up some signal handlers and print stats
 # every @logfreq seconds, any exceptions gets logged and exits the server
-daemonize do
+run_server do
   begin
     @logger.info("Starting server on port #{@port} in process #{$$}")
     
