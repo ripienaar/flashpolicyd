@@ -10,6 +10,9 @@
 # --host HOSTNAME
 #   The server to check
 #
+# --port PORT
+#   The port of the server to check
+#
 # --timeout TIMEOUT
 #   How long to wait to complete the transaction before assuming its critical. Default 5 seconds
 #
@@ -24,16 +27,19 @@ require 'timeout'
 require 'getoptlong'
 
 opts = GetoptLong.new(
-	[ '--host', GetoptLong::REQUIRED_ARGUMENT],
+	[ '--host', '-s', GetoptLong::REQUIRED_ARGUMENT],
+	[ '--port', '-p', GetoptLong::OPTIONAL_ARGUMENT],
 	[ '--timeout', '-t', GetoptLong::OPTIONAL_ARGUMENT],
 	[ '--help', '-h', GetoptLong::NO_ARGUMENT]
 )
 
+port = 843
 timeout = 5
 hostname = false
 
 def showhelp
 	begin
+		puts("--host SERVER\n--port PORT\n--timeout TIMEOUT\n");
 		require 'rdoc/ri/ri_paths'
 		require 'rdoc/usage'
 		RDoc::usage
@@ -51,6 +57,8 @@ opts.each { |opt, arg|
 		hostname = arg
 	when '--timeout'
 		timeout = arg
+	when '--port'
+		port = arg
 	end
 }
 
@@ -63,12 +71,12 @@ starttime = Time.new
 
 begin
 	timeout(timeout.to_i) do
-		t = TCPSocket.new(hostname, "843")
+		t = TCPSocket.new(hostname, port)
 		t.print("<policy-file-request/>\000")
 
 		answer = t.gets()
-		if answer.match(/xml version=/)
-			puts("OK: Got XML response in #{Time.new - starttime} seconds")
+		if answer.match(/cross-domain-policy/||/xml version=/)
+			puts("OK: Got XML response in #{Time.new - starttime} seconds\nAnswer: #{answer} ")
 		else 
 			raise("Got unexpected resonse: #{answer}")
 		end
@@ -79,7 +87,7 @@ rescue Timeout::Error
 	puts("CRITICAL: #{timeout} seconds TIMEOUT exceeded");
 	exit(2)
 rescue Exception => e
-	puts("CRITICAL: Unexpeced exception: #{e.message}")
+	puts("CRITICAL: Unexpected exception: #{e.message}")
 	exit(2)
 end
 
