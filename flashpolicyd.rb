@@ -55,7 +55,7 @@
 # at http://code.google.com/p/flashpolicyd
 #
 # == License
-# Released under the terms of the GPLv2, see the include COPYING file for full text of
+# Released under the terms of the Apache 2 License, see the include COPYING file for full text of
 # this license.
 #
 # == Author

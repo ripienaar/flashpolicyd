@@ -5,7 +5,7 @@ Name: flashpolicyd
 Version: %{version}
 Release: %{release}
 Group: System Tools
-License: GPLv2
+License: ASL 2
 URL: http://code.google.com/p/flashpolicyd/
 Source0: http://flashpolicyd.googlecode.com/files/flashpolicyd-%{version}.tgz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
