@@ -137,15 +137,6 @@ else
   exit
 end
 
-# create a logger keeping 10 files of 1MB each
-begin
-  @logger = Logger.new(logfile, 10, 102400)
-rescue Exception => e
-  puts("Got #{e.class} #{e} while attempting to create logfile #{logfile}")
-  exit
-end
-
-
 class PolicyServer
   # Generic logging method that takes a severity constant from the Logger class such as Logger::DEBUG
   def log(severity, msg)
@@ -417,8 +408,6 @@ end
 # every @logfreq seconds, any exceptions gets logged and exits the server
 run_server do
   begin
-    @logger.info("Starting server on port #{@port} in process #{$$}")
-
     server = PolicyServer.new(@port, "0.0.0.0", @xmldata, @logger, @timeout, @verbose)
     server.start
 
@@ -432,6 +421,18 @@ run_server do
       Process::GID.change_privilege(gid)
       Process::UID.change_privilege(uid)
     end
+
+    # create a logger keeping 10 files of 1MB each, do this after opening the socket
+    # and dropping privs so that rotation wont die when the initial opened logfile as
+    # root can not be rotated by the new user
+    begin
+      @logger = Logger.new(File.expand_path(logfile), 10, 102400)
+    rescue Exception => e
+      puts("Got #{e.class} #{e} while attempting to create logfile #{logfile}")
+      exit
+    end
+
+    @logger.info("Starting server on port #{@port} in process #{$$}")
 
     # Send HUP to toggle debug mode or not for a running server
     trap("HUP") {
