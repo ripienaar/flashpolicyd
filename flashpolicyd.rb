@@ -93,34 +93,34 @@ user = ""
 
 opts.each { |opt, arg|
   case opt
-    when '--help'
-      begin
-        require 'rdoc/ri/ri_paths'
-        require 'rdoc/usage'
-        RDoc::usage
-      rescue Exception => e
-        puts("Install RDoc::usage or view the comments in the top of the script to get detailed help")
-      end
+  when '--help'
+    begin
+      require 'rdoc/ri/ri_paths'
+      require 'rdoc/usage'
+      RDoc::usage
+    rescue Exception => e
+      puts("Install RDoc::usage or view the comments in the top of the script to get detailed help")
+    end
 
-      exit
-    when '--xml'
-      xmlfile = arg
-    when '--user'
-      user = arg
-    when '--verbose'
-      @verbose = true
-    when '--maxclients'
-      @maxclients = arg
-    when '--logfreq'
-      @logfreq = arg
-    when '--timeout'
-      @timeout = arg
-    when '--port'
-      @port = arg.to_i
-    when '--logfile'
-      logfile = arg
-    when '--no-daemonize'
-      @daemonize = false
+    exit
+  when '--xml'
+    xmlfile = arg
+  when '--user'
+    user = arg
+  when '--verbose'
+    @verbose = true
+  when '--maxclients'
+    @maxclients = arg
+  when '--logfreq'
+    @logfreq = arg
+  when '--timeout'
+    @timeout = arg
+  when '--port'
+    @port = arg.to_i
+  when '--logfile'
+    logfile = arg
+  when '--no-daemonize'
+    @daemonize = false
   end
 }
 
@@ -422,15 +422,15 @@ run_server do
     server = PolicyServer.new(@port, "0.0.0.0", @xmldata, @logger, @timeout, @verbose)
     server.start
 
-   # change user after binding to port
-   if user.length > 0
-        require 'etc'
-        uid = Etc.getpwnam(user).uid
-        gid = Etc.getpwnam(user).gid
-        # Change process ownership
-        Process.initgroups(user, gid)
-        Process::GID.change_privilege(gid)
-        Process::UID.change_privilege(uid)
+    # change user after binding to port
+    if user.length > 0
+      require 'etc'
+      uid = Etc.getpwnam(user).uid
+      gid = Etc.getpwnam(user).gid
+      # Change process ownership
+      Process.initgroups(user, gid)
+      Process::GID.change_privilege(gid)
+      Process::UID.change_privilege(uid)
     end
 
     # Send HUP to toggle debug mode or not for a running server
