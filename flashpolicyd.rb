@@ -243,7 +243,7 @@ class PolicyServer
   # Dump the current thread list
   def dumpthreads
     Thread.list.each {|t|
-      info("Thread: #{t.id} status #{t.status}")
+      info("Thread: #{t.object_id} status #{t.status}")
     }
   end
 
